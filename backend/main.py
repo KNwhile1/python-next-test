@@ -1,33 +1,38 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
+from fastapi.responses import JSONResponse
 import json
 
+# Create FastAPI instance
 app = FastAPI()
 
-# Load dummy data
-with open("dummyData.json", "r") as f:
-    DUMMY_DATA = json.load(f)
+# Allow CORS for the frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/api/data")
-def get_data():
-    """
-    Returns dummy data (e.g., list of users).
-    """
-    return DUMMY_DATA
+# Load data from dummyData.json
+def load_data():
+    with open("dummyData.json") as f:
+        data = json.load(f)
+    return data
 
-@app.post("/api/ai")
-async def ai_endpoint(request: Request):
-    """
-    Accepts a user question and returns a placeholder AI response.
-    (Optionally integrate a real AI model or external service here.)
-    """
-    body = await request.json()
-    user_question = body.get("question", "")
-    
-    # Placeholder logic: echo the question or generate a simple response
-    # Replace with real AI logic as desired (e.g., call to an LLM).
-    return {"answer": f"This is a placeholder answer to your question: {user_question}"}
+# API endpoint for sales reps
+@app.get("/api/sales-reps")
+async def get_sales_reps():
+    try:
+        data = load_data()
+        # Accessing the 'salesReps' part of the JSON data
+        sales_reps = data.get("salesReps", [])
+        return JSONResponse(content=sales_reps)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
+# Main entry point for testing the server
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
