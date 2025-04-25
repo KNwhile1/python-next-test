@@ -1,74 +1,59 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
-  const [users, setUsers] = useState([]);
+  const [salesReps, setSalesReps] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/data")
-      .then((res) => res.json())
-      .then((data) => {
-        setUsers(data.users || []);
+    async function fetchSalesReps() {
+      try {
+        const response = await fetch("http://localhost:8000/api/sales-reps");
+        if (!response.ok) throw new Error("Failed to fetch data");
+        const data = await response.json();
+        setSalesReps(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch data:", err);
-        setLoading(false);
-      });
+      }
+    }
+
+    fetchSalesReps();
   }, []);
 
-  const handleAskQuestion = async () => {
-    try {
-      const response = await fetch("http://localhost:8000/api/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
-      });
-      const data = await response.json();
-      setAnswer(data.answer);
-    } catch (error) {
-      console.error("Error in AI request:", error);
-    }
-  };
+  if (loading) return <div className="loading">Loading...</div>;
+  if (error) return <div className="error">Error: {error}</div>;
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>Next.js + FastAPI Sample</h1>
-
-      <section style={{ marginBottom: "2rem" }}>
-        <h2>Dummy Data</h2>
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <ul>
-            {users.map((user) => (
-              <li key={user.id}>
-                {user.name} - {user.role}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section>
-        <h2>Ask a Question (AI Endpoint)</h2>
-        <div>
-          <input
-            type="text"
-            placeholder="Enter your question..."
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-          />
-          <button onClick={handleAskQuestion}>Ask</button>
-        </div>
-        {answer && (
-          <div style={{ marginTop: "1rem" }}>
-            <strong>AI Response:</strong> {answer}
-          </div>
-        )}
-      </section>
+    <div className="container">
+      <h1 className="title">Sales Representatives</h1>
+      <ul className="sales-reps-list">
+        {salesReps.map((rep) => (
+          <li className="sales-rep" key={rep.id}>
+            <h2 className="rep-header">
+              {rep.name} - {rep.role} ({rep.region})
+            </h2>
+            <p><strong>Skills:</strong> {rep.skills.join(", ")}</p>
+            <p><strong>Deals:</strong></p>
+            <ul>
+              {rep.deals.map((deal, index) => (
+                <li key={index}>
+                  Client: {deal.client}, Value: ${deal.value}, Status: {deal.status}
+                </li>
+              ))}
+            </ul>
+            <p><strong>Clients:</strong></p>
+            <ul>
+              {rep.clients.map((client, index) => (
+                <li key={index}>
+                  {client.name} (Industry: {client.industry}, Contact: {client.contact})
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
